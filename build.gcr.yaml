@@ -1,0 +1,62 @@
+name: "Reusable: Build and Push GCR Image"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Deployment environment name
+        required: false
+        type: string
+        default: dev
+      project_id:
+        description: GCP project id
+        required: false
+        type: string
+        default: rules-engine-dev-393220
+      region:
+        description: GCP region (not used by gcr.io)
+        required: false
+        type: string
+        default: europe-west1
+      service_name:
+        description: Image/repository name
+        required: true
+        type: string
+      working_directory:
+        description: Directory containing Dockerfile/context
+        required: true
+        type: string
+      tag:
+        description: Image tag to push
+        required: false
+        type: string
+        default: ${{ github.sha }}
+    secrets:
+      gcp_credentials_json:
+        required: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Auth to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        project_id: ${{ inputs.project_id }}
+        credentials_json: ${{ secrets.gcp_credentials_json }}
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ inputs.project_id }}
+    - name: Build and push with Cloud Build
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        gcloud builds submit \
+          --tag "gcr.io/${{ inputs.project_id }}/${{ inputs.service_name }}:${{ inputs.tag }}"
