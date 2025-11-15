@@ -16,6 +16,11 @@ on:
         description: GCP project id
         required: true
         type: string
+      region:
+        description: GCP region
+        required: false
+        type: string
+        default: europe-west1
     secrets:
       gcp_credentials_json:
         required: true
