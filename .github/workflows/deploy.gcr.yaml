@@ -1,0 +1,43 @@
+
+name: "Reusable: Deploy to GCE VM"
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        description: Service name
+        required: true
+        type: string
+      image_name:
+        description: Docker image name
+        required: false
+        type: string
+        default: gcr.io/${{ inputs.project_id }}/${{ inputs.service_name }}:$GITHUB_SHA
+      project_id:
+        description: GCP project id
+        required: true
+        type: string
+    secrets:
+      gcp_credentials_json:
+        required: true
+jobs:
+  deploy:
+    name: Deploy to GCR
+    runs-on: ubuntu-latest
+    steps:
+    - uses: 'google-github-actions/auth@v2'
+      with:
+        project_id: ${{ inputs.project_id }}
+        credentials_json: ${{ secrets.gcp_credentials_json }}
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ inputs.project_id }}
+    - name: Deploy Client to Prod
+      run: |-
+        gcloud run deploy "${{ inputs.service_name }}" \
+          --image "gcr.io/${{ inputs.project_id }}/${{ inputs.service_name }}:$GITHUB_SHA" \
+          --platform "managed" \
+          --allow-unauthenticated \
+          --max-instances 10 \
+          --region ${{ inputs.region }}
